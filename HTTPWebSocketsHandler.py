@@ -16,9 +16,12 @@ import struct
 from base64 import b64encode
 from hashlib import sha1
 from mimetools import Message
+import os
+import posixpath
 from StringIO import StringIO
 import errno, socket #for socket exceptions
 import threading
+import urllib
 
 class WebSocketError(Exception):
     pass
@@ -220,4 +223,23 @@ class HTTPWebSocketsHandler(SimpleHTTPRequestHandler):
         msg.append(0x80 + self._opcode_close)
         msg.append(0x00)
         self.request.send(msg)
-    
+
+    def translate_path(self, path):
+        """This function translates the path that is inside of the html file to
+           a path based on where we have specified the HTML files to be.
+           Set base_path in the base class to the directory that contains your
+           html, js, and css files for this function to work."""
+
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None, words)
+        path = self.base_path
+
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word in (os.curdir, os.pardir):
+                continue
+            path = os.path.join(path, word)
+
+        return path
